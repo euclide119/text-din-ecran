@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#0a6b4b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Text din Ecran</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Unealtă de telefon, o singură coloană: alegi fișiere, vezi progresul, primești contactele. Verde de receptor pe hârtie rece. */
+:root{--bg:#f3f6f4;--card:#fff;--fg:#14211b;--mut:#566a60;--line:#d3ddd7;--acc:#0a6b4b;--acc-fg:#fff;--soft:#dff0e8;--warn:#9a4b00;
+--disp:"Bricolage Grotesque","Helvetica Neue",sans-serif;--body:"IBM Plex Sans",-apple-system,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1613;--card:#18211d;--fg:#e8f0ec;--mut:#9db0a6;--line:#2d3a33;--acc:#4cc79a;--acc-fg:#06231a;--soft:#183a2d;--warn:#f0a65c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1613;--card:#18211d;--fg:#e8f0ec;--mut:#9db0a6;--line:#2d3a33;--acc:#4cc79a;--acc-fg:#06231a;--soft:#183a2d;--warn:#f0a65c;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+main{max-width:640px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+h1{font:800 clamp(30px,8vw,42px)/1.05 var(--disp);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 19px/1.2 var(--disp);margin:0}
+p{margin:0}.mut{color:var(--mut);font-size:14px}
+.alege{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:flex;align-items:center;justify-content:center;text-align:center;min-height:48px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:600 15px var(--body);cursor:pointer}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-fg)}
+.btn:focus-visible,input:focus-visible,label.btn:focus-within{outline:3px solid var(--acc);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:default}
+label.btn input{position:absolute;opacity:0;width:1px;height:1px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.bara{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bara i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.rand{display:flex;flex-wrap:wrap;gap:8px}.rand .btn{flex:1 1 130px}
+ol{margin:0;padding-left:20px;display:grid;gap:4px;font-size:14px;color:var(--mut)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+td,th{padding:6px 4px;border-top:1px solid var(--line);text-align:left;vertical-align:middle}
+th{border-top:0;font-size:12px;color:var(--mut);letter-spacing:.04em;text-transform:uppercase;font-weight:600}
+td input[type=text]{width:100%;box-sizing:border-box;min-width:0;border:1px solid transparent;background:transparent;color:var(--fg);font:inherit;padding:5px;border-radius:6px}
+td input[type=text]:hover,td input[type=text]:focus{border-color:var(--line)}
+td.tel input{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+td.bif{width:30px}.gol{color:var(--warn)}
+#tabel{min-width:980px}#tabel td input[type=text]{min-width:90px}
+img.mini{display:block;width:44px;height:64px;object-fit:cover;border-radius:4px;cursor:zoom-in;border:1px solid var(--line)}
+img.mini.mare{width:240px;height:auto;cursor:zoom-out}
+.camp{display:grid;gap:4px}.camp label{font:600 14px var(--body)}
+.camp input{min-height:44px;box-sizing:border-box;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:16px var(--body);padding:8px 10px}
+.set{display:grid;gap:4px;padding-top:8px;border-top:1px solid var(--line)}.set:first-child{border-top:0;padding-top:0}
+.set input{min-height:40px;box-sizing:border-box;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:15px var(--body);padding:6px 10px}
+.scrol{overflow-x:auto}
+textarea{width:100%;box-sizing:border-box;min-height:220px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:14px/1.45 var(--mono);padding:10px}
+.tag{display:inline-block;background:var(--soft);color:var(--acc);font:600 12px var(--body);padding:2px 8px;border-radius:99px}
+@media (prefers-reduced-motion:reduce){.bara i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <header style="display:grid;gap:6px">
+    <h1>Text din Ecran</h1>
+    <p class="mut">Scoate textul și contactele din poze și din filmări de ecran. Totul se citește aici, pe telefonul tău; nimic nu se trimite nicăieri.</p>
+  </header>
+  <div class="camp">
+    <label for="alocare">Alocare pentru setul următor</label>
+    <input id="alocare" type="text" placeholder="ex. Grup vecini Giroc" autocomplete="off">
+    <p class="mut">Tot ce alegi deodată, de la o poză la 1000 sau o filmare, devine un set. Toate contactele lui primesc automat această alocare.</p>
+  </div>
+  <div class="alege">
+    <label class="btn pri">Alege poze<input id="poze" type="file" accept="image/*" multiple></label>
+    <label class="btn pri">Alege filmare<input id="video" type="file" accept="video/*" multiple></label>
+  </div>
+  <section id="ajutor">
+    <h2>Pentru ecran cu derulare</h2>
+    <ol>
+      <li>Pornește înregistrarea ecranului din meniul rapid al telefonului.</li>
+      <li>Derulează lent în aplicația dorită, apoi oprește înregistrarea.</li>
+      <li>Revino aici, apasă „Alege filmare” și selecteaz-o.</li>
+    </ol>
+    <button id="exemplu" class="btn" type="button">Încearcă pe un exemplu</button>
+  </section>
+  <section id="progres" hidden>
+    <h2 id="pTitlu">Se pregătește…</h2>
+    <div class="bara"><i id="pBara"></i></div>
+    <p id="pText" class="mut">Prima dată se încarcă motorul de citire (circa 8 MB). Ține pagina deschisă.</p>
+    <button id="opreste" class="btn" type="button">Oprește</button>
+  </section>
+  <section id="eroare" hidden><p id="eText" class="gol"></p></section>
+  <section id="seturi" hidden>
+    <h2>Seturi</h2>
+    <div id="seturiLista" style="display:grid;gap:8px"></div>
+    <p class="mut">Schimbi alocarea aici și se schimbă la toate contactele setului.</p>
+  </section>
+  <section id="contacte">
+    <div class="rand" style="justify-content:space-between;align-items:center"><h2 id="cTitlu">Contacte găsite</h2><span id="cTag" class="tag">exemplu</span></div>
+    <div class="scrol"><table id="tabel"><thead><tr><th></th><th>Nume</th><th>Telefon</th><th>E-mail</th><th>Poză</th><th>Data</th><th>Sursă</th><th>Alocare</th></tr></thead><tbody id="cCorp"></tbody></table></div>
+    <div class="rand" id="cBut" hidden>
+      <button id="copTel" class="btn pri" type="button">Copiază tabelul ca text</button>
+      <button id="salvVcf" class="btn" type="button">Salvează pentru Contacte (.vcf)</button>
+      <button id="salvCsv" class="btn" type="button">Salvează CSV</button>
+    </div>
+    <textarea id="rezerva" aria-label="Text de copiat manual" hidden></textarea>
+    <p id="cNota" class="mut">Așa arată rezultatul. Rândurile de mai sus sunt doar un exemplu, nu date reale.</p>
+  </section>
+  <section id="textul" hidden>
+    <h2 id="tTitlu">Tot textul</h2>
+    <textarea id="tot" aria-label="Tot textul extras" spellcheck="false"></textarea>
+    <div class="rand">
+      <button id="copTot" class="btn" type="button">Copiază textul</button>
+      <button id="salvTxt" class="btn" type="button">Salvează TXT</button>
+      <button id="goleste" class="btn" type="button">Golește tot</button>
+    </div>
+  </section>
+</main>
+<script src="ocr/tesseract.min.js"></script>
+<script>
+// ---------- Contacte: logică pură (fără DOM) ----------
+const CUV_UI=/^(mobil|mobile|acas[aă]|home|serviciu|work|apel(ează)?|call|mesaj|message|sms|telefon|phone|whatsapp|contacte?|contacts?|favorite|recente|editeaz[aă]|video|email|e-mail|grup|group|azi|ieri|today|yesterday)$/i;
+function normTel(c){
+  let p=c.replace(/(?<=\d)[oO](?=\d)/g,'0').replace(/[^\d+]/g,'');
+  if(p.startsWith('00'))p='+'+p.slice(2);
+  if(/^\+40\d{9}$/.test(p)){return /^\+40[237]/.test(p)?p:null}
+  if(/^40[237]\d{8}$/.test(p))return '+'+p;
+  if(/^0[237]\d{8}$/.test(p))return '+40'+p.slice(1);
+  if(/^\+[1-9]\d{7,14}$/.test(p))return p;
+  return null;
+}
+const RE_TEL=/(?:\+|00)?\d[\d\s().\-\/oO]{7,18}\d/g;
+function eNume(l){
+  const t=l.trim();
+  if(t.length<2||t.length>60||/\d{3}/.test(t))return false;
+  if(!/\p{L}{2}/u.test(t)||CUV_UI.test(t))return false;
+  return true;
+}
+function curataNume(s){return s.replace(/^[^\p{L}]+|[^\p{L}.)]+$/gu,'').trim()}
+const RE_MAIL=/[\p{L}\p{N}._%+\-]+@[\p{L}\p{N}\-]+(?:\.[\p{L}\p{N}\-]+)*\.[\p{L}]{2,}/gu;
+function gasesteContacte(linii){
+  const r=[];let ult=null;
+  // Un telefon și un e-mail apropiate sunt același om, dacă între ele nu apare alt nume.
+  const alipeste=(camp,i)=>{
+    if(!ult||ult[camp]||i-ult.i>2)return false;
+    for(let k=ult.i+1;k<i;k++)if(eNume(linii[k]))return false;
+    return true;
+  };
+  const numeLinga=(rest,i)=>{
+    let nume=curataNume(rest);
+    if(eNume(nume))return nume;
+    for(let k=i-1;k>=Math.max(0,i-3);k--){if(eNume(linii[k]))return curataNume(linii[k])}
+    return '';
+  };
+  linii.forEach((l,i)=>{
+    const mailuri=(l.match(RE_MAIL)||[]).map(m=>m.toLowerCase());
+    const faraMail=l.replace(RE_MAIL,' ');
+    const tels=[];let rest=faraMail;
+    for(const m of faraMail.matchAll(RE_TEL)){const t=normTel(m[0]);if(t){tels.push(t);rest=rest.replace(m[0],' ')}}
+    for(const tel of tels){
+      if(alipeste('tel',i)){ult.tel=tel;ult.i=i;if(!ult.nume)ult.nume=numeLinga(rest,i)}
+      else{ult={nume:numeLinga(rest,i),tel,mail:'',i};r.push(ult)}
+    }
+    for(const mail of mailuri){
+      if(alipeste('mail',i)){ult.mail=mail;ult.i=i;if(!ult.nume)ult.nume=numeLinga(rest,i)}
+      else{ult={nume:numeLinga(rest,i),tel:'',mail,i};r.push(ult)}
+    }
+  });
+  return r.map(({nume,tel,mail})=>({nume,tel,mail}));
+}
+// Îmbinarea rândurilor: la derulare același rând apare în mai multe cadre, cu mici diferențe de citire.
+const cheie=s=>s.toLowerCase().normalize('NFD').replace(/[^\p{L}\p{N}]/gu,'');
+function bigrame(s){const m=new Map();for(let i=0;i<s.length-1;i++){const b=s.slice(i,i+2);m.set(b,(m.get(b)||0)+1)}return m}
+function asemanare(a,b){
+  if(a===b)return 1; if(a.length<3||b.length<3)return 0;
+  const x=bigrame(a),y=bigrame(b);let c=0;for(const[k,v]of x)c+=Math.min(v,y.get(k)||0);
+  return 2*c/(a.length+b.length-2);
+}
+function imbina(vechi,noi){
+  const adaos=[];
+  for(const l of noi){
+    const k=cheie(l); if(!k)continue;
+    let dublu=false;
+    for(let i=vechi.length-1,n=0;i>=0&&n<300;i--,n++){if(asemanare(vechi[i].k,k)>=.85){dublu=true;break}}
+    if(!dublu){const o={t:l,k};vechi.push(o);adaos.push(l)}
+  }
+  return adaos;
+}
+// Textul din poze nu trebuie să devină formulă când e lipit în Excel sau Sheets.
+const faraFormula=v=>{const t=String(v??'').replace(/[\t\r\n]+/g,' ').trim();return /^[=+\-@]/.test(t)?"'"+t:t};
+const celulaTel=v=>String(v??'').replace(/[\t\r\n]+/g,' ').trim();
+const COLOANE=['Nume','Telefon','E-mail','Poză','Data','Sursă','Alocare'];
+function tabelText(lista){
+  const rand=c=>[faraFormula(c.nume),celulaTel(c.tel),faraFormula(c.mail),faraFormula(c.fisier),faraFormula(c.data),faraFormula(c.sursa),faraFormula(c.alocare)].join('\t');
+  return [COLOANE.join('\t'),...lista.map(rand)].join('\n');
+}
+function csvGoogle(lista){
+  const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+  return '\ufeffName,Phone 1 - Type,Phone 1 - Value,E-mail 1 - Value,Labels,Notes\r\n'+lista.map(c=>[q(faraFormula(c.nume)),q('Mobile'),q(celulaTel(c.tel)),q(faraFormula(c.mail)),q(faraFormula(c.alocare)),q(faraFormula([c.sursa,c.data].filter(Boolean).join(' · ')))].join(',')).join('\r\n')+'\r\n';
+}
+function vcard(lista){
+  const e=v=>String(v??'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/([,;])/g,'\\$1');
+  return lista.map(c=>{
+    const nume=c.nume||c.tel||c.mail,l=['BEGIN:VCARD','VERSION:3.0','FN:'+e(nume),'N:'+e(nume)+';;;;'];
+    if(c.tel)l.push('TEL;TYPE=CELL:'+e(c.tel));
+    if(c.mail)l.push('EMAIL:'+e(c.mail));
+    if(c.alocare)l.push('CATEGORIES:'+e(c.alocare));
+    const n=[c.sursa,c.data].filter(Boolean).join(' · ');
+    if(n)l.push('NOTE:'+e(n));
+    l.push('END:VCARD');
+    return l.join('\r\n');
+  }).join('\r\n')+'\r\n';
+}
+function dataFisier(nume,ms){
+  const m=/(20\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])/.exec(nume||'');
+  if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+  if(!ms)return '';
+  const d=new Date(ms),z=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+if(typeof window==='undefined'){module.exports={gasesteContacte,imbina,normTel,csvGoogle,tabelText,dataFisier,vcard}}
+</script>
+<script>
+const $=s=>document.getElementById(s);
+const stare={linii:[],contacte:new Map(),seturi:[],set:null,oprit:false,lucreaza:false,worker:null};
+const EXEMPLU=[{nume:'Exemplu Popescu',tel:'+40722000111',mail:'popescu@exemplu.ro',data:'2026-11-04',sursa:'captura_01.png',alocare:'Grup exemplu'},{nume:'Exemplu Ionescu',tel:'+40741000222',mail:'',data:'2026-11-04',sursa:'filmare.mp4 · 00:12',alocare:'Grup exemplu'}];
+function randContact(c,real){
+  const tr=document.createElement('tr');
+  const b=document.createElement('td');b.className='bif';
+  const ib=document.createElement('input');ib.type='checkbox';ib.checked=c.pastreaza!==false;ib.setAttribute('aria-label','Păstrează contactul');ib.disabled=!real;
+  if(real)ib.onchange=()=>c.pastreaza=ib.checked;
+  b.append(ib);tr.append(b);
+  const camp=(cheie,et,cls)=>{
+    const td=document.createElement('td');if(cls)td.className=cls;
+    const i=document.createElement('input');i.type='text';i.value=c[cheie]||'';i.setAttribute('aria-label',et);i.readOnly=!real;
+    if(real)i.oninput=()=>{c[cheie]=i.value;c.editat=true};
+    td.append(i);return td;
+  };
+  const poza=document.createElement('td');
+  if(c.mini){const im=document.createElement('img');im.className='mini';im.src=c.mini;im.alt='Poza din care vine contactul';im.onclick=()=>im.classList.toggle('mare');poza.append(im)}
+  tr.append(camp('nume','Nume'),camp('tel','Telefon','tel'),camp('mail','E-mail'),poza,camp('data','Data'),camp('sursa','Sursă'),camp('alocare','Alocare'));
+  return tr;
+}
+function deseneazaSeturi(){
+  const l=$('seturiLista');
+  $('seturi').hidden=!stare.seturi.length;
+  if(l.contains(document.activeElement)){stare.seturi.forEach(s=>{const e=$('setInfo'+s.nr);if(e)e.textContent=infoSet(s)});return}
+  l.textContent='';
+  stare.seturi.forEach(s=>{
+    const d=document.createElement('div');d.className='set';
+    const p=document.createElement('p');p.className='mut';p.id='setInfo'+s.nr;p.textContent=infoSet(s);
+    const i=document.createElement('input');i.type='text';i.value=s.alocare;i.placeholder='Fără alocare';i.setAttribute('aria-label','Alocarea setului '+s.nr);
+    i.oninput=()=>{s.alocare=i.value;for(const c of stare.contacte.values())if(c.set===s.nr)c.alocare=i.value;deseneazaContacte()};
+    d.append(p,i);l.append(d);
+  });
+}
+const infoSet=s=>{let n=0;for(const c of unice())if(c.set===s.nr)n++;return `Set ${s.nr} · ${s.fisiere} ${s.fisiere===1?'fișier':'fișiere'} · ${n} ${n===1?'contact':'contacte'}`};
+function deseneazaContacte(){
+  const corp=$('cCorp');if(corp.contains(document.activeElement))return;corp.textContent='';
+  const lista=unice(),real=stare.seturi.length>0;
+  if(real){
+    lista.forEach(c=>corp.append(randContact(c,true)));
+    $('cTag').hidden=true;$('cBut').hidden=!lista.length;
+    $('cTitlu').textContent=lista.length+(lista.length===1?' contact găsit':' contacte găsite');
+    $('cNota').textContent=lista.length?'Copiază tabelul și lipește-l oriunde: în Excel sau Sheets intră pe coloane. Corectezi direct în tabel.':'Nu am găsit numere de telefon. Textul complet este mai jos.';
+  }else EXEMPLU.forEach(c=>corp.append(randContact(c,false)));
+}
+const gaseste=(set,c)=>{
+  const k1=c.tel&&set.nr+'|'+c.tel,k2=c.mail&&set.nr+'|m:'+c.mail;
+  return (k1&&stare.contacte.get(k1))||(k2&&stare.contacte.get(k2))||null;
+};
+function adauga(linii,meta){
+  const set=stare.set;
+  const noi=imbina(set.linii,linii);
+  stare.linii=stare.seturi.flatMap(s=>s.linii);
+  // Fiecare set își păstrează contactele: același număr în două seturi primește ambele alocări, pe rânduri separate.
+  for(const c of gasesteContacte(linii)){
+    let v=gaseste(set,c);
+    if(!v){
+      v={nume:'',tel:c.tel,mail:c.mail,pastreaza:true,voturi:new Map(),set:set.nr,alocare:set.alocare,data:meta.data,sursa:meta.sursa,fisier:meta.fisier,mini:meta.mini()};
+      stare.contacte.set(set.nr+'|'+(c.tel||'m:'+c.mail),v);
+    }
+    if(c.tel&&!v.tel){v.tel=c.tel;stare.contacte.set(set.nr+'|'+c.tel,v)}
+    if(c.mail&&!v.mail){v.mail=c.mail;stare.contacte.set(set.nr+'|m:'+c.mail,v)}
+    if(c.nume&&!v.editat){
+      v.voturi.set(c.nume,(v.voturi.get(c.nume)||0)+1);
+      v.nume=[...v.voturi].sort((a,b)=>b[1]-a[1])[0][0];
+    }
+  }
+  const text=stare.seturi.length>1
+    ?stare.seturi.flatMap(s=>s.linii.length?['--- Set '+s.nr+(s.alocare?' · '+s.alocare:'')+' ---',...s.linii.map(x=>x.t)]:[])
+    :stare.linii.map(x=>x.t);
+  $('tot').value=text.join('\n');
+  $('textul').hidden=!stare.linii.length;
+  $('tTitlu').textContent=`Tot textul (${stare.linii.length} rânduri)`;
+  deseneazaContacte();deseneazaSeturi();
+  return noi.length;
+}
+const unice=()=>[...new Set(stare.contacte.values())];
+const miniatura=(src,w,h)=>{let u='';return()=>{if(u)return u;const c=document.createElement('canvas');c.width=240;c.height=Math.max(1,Math.round(240*h/w));c.getContext('2d').drawImage(src,0,0,c.width,c.height);return u=c.toDataURL('image/jpeg',.7)}};
+function progres(titlu,f,text){$('progres').hidden=false;if(titlu)$('pTitlu').textContent=titlu;$('pBara').style.width=Math.round(f*100)+'%';if(text)$('pText').textContent=text}
+function eroare(m){$('eroare').hidden=!m;$('eText').textContent=m||''}
+const absolut=p=>new URL(p,location.href).href;
+async function motor(){
+  if(stare.worker)return stare.worker;
+  progres('Se încarcă motorul de citire',0,'Prima dată durează mai mult (circa 8 MB). Ține pagina deschisă.');
+  const limba=async code=>{const r=await fetch('ocr/'+code+'.b64.txt');if(!r.ok)throw new Error('datele de limbă lipsesc');const t=atob((await r.text()).trim());const d=new Uint8Array(t.length);for(let i=0;i<t.length;i++)d[i]=t.charCodeAt(i);return{code,data:d}};
+  const limbi=await Promise.all(['ron','eng'].map(limba));
+  stare.worker=await Tesseract.createWorker(limbi,1,{
+    workerPath:absolut('ocr/worker.min.js'),corePath:absolut('ocr/tesseract-core-simd-lstm.wasm.js'),
+    workerBlobURL:false,cacheMethod:'none'
+  });
+  return stare.worker;
+}
+// Pregătește imaginea: mărește pozele mici, trece pe tonuri de gri și inversează modul întunecat.
+function pregateste(sursa,w,h){
+  const f=w<1000?Math.min(2,1400/w):w>2200?2200/w:1;
+  const c=document.createElement('canvas');c.width=Math.round(w*f);c.height=Math.round(h*f);
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(sursa,0,0,c.width,c.height);
+  const im=x.getImageData(0,0,c.width,c.height),d=im.data;let s=0;
+  for(let i=0;i<d.length;i+=4){const g=.299*d[i]+.587*d[i+1]+.114*d[i+2];d[i]=d[i+1]=d[i+2]=g;s+=g}
+  if(s/(d.length/4)<110)for(let i=0;i<d.length;i+=4){d[i]=d[i+1]=d[i+2]=255-d[i]}
+  x.putImageData(im,0,0);return c;
+}
+const laBlob=c=>new Promise(r=>c.toBlob(r,'image/png'));
+async function citeste(c){
+  const w=await motor();
+  const {data}=await w.recognize(await laBlob(c));
+  return data.text.split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l.length>1);
+}
+async function poza(f){
+  const b=await createImageBitmap(f);
+  try{adauga(await citeste(pregateste(b,b.width,b.height)),{sursa:f.name,fisier:f.name,data:dataFisier(f.name,f.lastModified),mini:miniatura(b,b.width,b.height)})}finally{b.close()}
+}
+const amprenta=(v,w,h)=>{const c=document.createElement('canvas');c.width=48;c.height=96;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,0,0,48,96);const d=x.getImageData(0,0,48,96).data,o=new Uint8Array(4608);for(let i=0;i<4608;i++)o[i]=d[i*4+1];return o};
+const dif=(a,b)=>{let s=0;for(let i=0;i<a.length;i++)s+=Math.abs(a[i]-b[i]);return s/a.length};
+async function filmare(f,eticheta){
+  const u=URL.createObjectURL(f),v=document.createElement('video');
+  v.muted=true;v.playsInline=true;v.preload='auto';v.src=u;
+  try{
+    await new Promise((ok,nu)=>{v.onloadeddata=ok;v.onerror=()=>nu(new Error('Telefonul nu poate deschide această filmare.'))});
+    const dur=v.duration;
+    if(!isFinite(dur)||!v.videoWidth)throw new Error('Filmarea nu are o durată citibilă.');
+    const pas=.6,total=Math.min(1200,Math.ceil(dur/pas)+1);let ult=null,citite=0;
+    for(let i=0;i<total&&!stare.oprit;i++){
+      await new Promise(ok=>{v.onseeked=ok;v.currentTime=i===total-1?Math.max(0,dur-.05):i*pas});
+      const a=amprenta(v);
+      if(ult&&dif(a,ult)<.5){progres(eticheta,(i+1)/total,`Cadrul ${i+1} din ${total}: neschimbat, sărit.`);continue}
+      ult=a;citite++;
+      const sec=Math.round(v.currentTime),z=n=>String(n).padStart(2,'0');
+      adauga(await citeste(pregateste(v,v.videoWidth,v.videoHeight)),{sursa:`${f.name} · ${z(Math.floor(sec/60))}:${z(sec%60)}`,fisier:f.name,data:dataFisier(f.name,f.lastModified),mini:miniatura(v,v.videoWidth,v.videoHeight)});
+      progres(eticheta,(i+1)/total,`Cadrul ${i+1} din ${total}, ${citite} citite, ${stare.linii.length} rânduri unice.`);
+    }
+  }finally{URL.revokeObjectURL(u)}
+}
+async function proceseaza(fisiere){
+  if(stare.lucreaza||!fisiere.length)return;
+  stare.lucreaza=true;stare.oprit=false;eroare('');
+  stare.set={nr:stare.seturi.length+1,alocare:$('alocare').value.trim(),fisiere:fisiere.length,linii:[]};
+  stare.seturi.push(stare.set);$('alocare').value='';deseneazaSeturi();deseneazaContacte();
+  let treaza=null;try{treaza=await navigator.wakeLock.request('screen')}catch(e){}
+  let rele=0;
+  try{
+    await motor();
+    for(let i=0;i<fisiere.length&&!stare.oprit;i++){
+      const f=fisiere[i],et=`Fișierul ${i+1} din ${fisiere.length}`;
+      try{
+        if(f.type.startsWith('video/'))await filmare(f,et);
+        else{progres(et,i/fisiere.length,'Se citește '+f.name);await poza(f);progres(et,(i+1)/fisiere.length)}
+      }catch(e){rele++;console.warn(e)}
+    }
+    if(rele)eroare(rele===1?'Un fișier nu a putut fi citit.':rele+' fișiere nu au putut fi citite.');
+  }catch(e){
+    console.error(e);eroare('Motorul de citire nu a pornit: '+(e&&e.message||e));
+  }finally{
+    stare.lucreaza=false;$('progres').hidden=true;$('ajutor').hidden=stare.seturi.length>0;
+    try{treaza&&treaza.release()}catch(e){}
+    if(stare.linii.length)deseneazaContacte();
+  }
+}
+function pozaExemplu(){
+  const c=document.createElement('canvas');c.width=1080;c.height=900;const x=c.getContext('2d');
+  x.fillStyle='#fff';x.fillRect(0,0,1080,900);x.fillStyle='#111';x.font='52px Arial';
+  [['Ana Exemplu','0722 000 111'],['Mihai Exemplu','+40 741 000 222'],['Elena Exemplu','0356 000 333']].forEach(([n,t],i)=>{x.fillText(n,60,120+i*270);x.fillText(t,60,190+i*270)});
+  return new Promise(r=>c.toBlob(b=>r(new File([b],'exemplu.png',{type:'image/png'})),'image/png'));
+}
+async function copiaza(t,btn){
+  const vechi=btn.textContent;
+  try{await navigator.clipboard.writeText(t);btn.textContent='Copiat'}
+  catch(e){const z=$('rezerva');z.value=t;z.hidden=false;z.focus();z.select();btn.textContent='Selectat: copiază manual'}
+  setTimeout(()=>btn.textContent=vechi,1800);
+}
+const pastrate=()=>unice().filter(c=>c.pastreaza);
+function salveaza(nume,text,tip){
+  const u=URL.createObjectURL(new Blob([text],{type:tip})),a=document.createElement('a');
+  a.href=u;a.download=nume;document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),30000);
+}
+$('poze').onchange=e=>{const f=[...e.target.files];e.target.value='';proceseaza(f)};
+$('video').onchange=e=>{const f=[...e.target.files];e.target.value='';proceseaza(f)};
+$('exemplu').onclick=async()=>proceseaza([await pozaExemplu()]);
+$('opreste').onclick=()=>{stare.oprit=true;$('pText').textContent='Se oprește după cadrul curent…'};
+$('copTot').onclick=e=>copiaza($('tot').value,e.target);
+$('copTel').onclick=e=>copiaza(tabelText(pastrate()),e.target);
+$('salvVcf').onclick=()=>salveaza('contacte.vcf',vcard(pastrate()),'text/vcard');
+$('salvCsv').onclick=()=>salveaza('contacte.csv',csvGoogle(pastrate()),'text/csv');
+$('salvTxt').onclick=()=>salveaza('text.txt',$('tot').value,'text/plain');
+$('goleste').onclick=()=>{stare.linii=[];stare.seturi=[];stare.set=null;stare.contacte.clear();deseneazaSeturi();$('rezerva').hidden=true;$('tot').value='';$('textul').hidden=true;$('ajutor').hidden=false;$('cTag').hidden=false;$('cBut').hidden=true;$('cTitlu').textContent='Contacte găsite';$('cNota').textContent='Așa arată rezultatul. Rândurile de mai sus sunt doar un exemplu, nu date reale.';deseneazaContacte()};
+deseneazaContacte();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn(e));
+</script>
+</body>
+</html>
