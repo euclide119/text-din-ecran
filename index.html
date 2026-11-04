@@ -136,23 +136,30 @@ function tabel(){
 function progres(titlu,f,text){$('progres').hidden=false;if(titlu)$('pTitlu').textContent=titlu;$('pBara').style.width=Math.round(f*100)+'%';if(text!==undefined)$('pText').textContent=text}
 function eroare(m){$('eroare').hidden=!m;$('eText').textContent=m||''}
 const absolut=p=>new URL(p,location.href).href;
-async function motor(){
-  if(stare.worker)return stare.worker;
-  progres('Se încarcă motorul de citire',0,'Prima dată durează mai mult (circa 8 MB).');
-  const limba=async code=>{const r=await fetch('ocr/'+code+'.b64.txt');if(!r.ok)throw new Error('datele de limbă lipsesc');const t=atob((await r.text()).trim());const d=new Uint8Array(t.length);for(let i=0;i<t.length;i++)d[i]=t.charCodeAt(i);return{code,data:d}};
-  const limbi=await Promise.all(['ron','eng'].map(limba));
-  stare.worker=await Tesseract.createWorker(limbi,1,{workerPath:absolut('ocr/worker.min.js'),corePath:absolut('ocr/tesseract-core-simd-lstm.wasm.js'),workerBlobURL:false,cacheMethod:'none'});
-  return stare.worker;
+const NR_MOTOARE=(navigator.hardwareConcurrency||2)>=4?2:1,REPORNIRE=200;
+const motoare=[];let limbaRon=null;
+async function motor(i=0){
+  if(motoare[i]&&motoare[i].folosit<REPORNIRE)return motoare[i].w;
+  if(motoare[i]){const v=motoare[i].w;motoare[i]=null;await v.terminate().catch(()=>{})}
+  if(!limbaRon){
+    progres('Se încarcă motorul de citire',0,'Prima dată durează mai mult (circa 6 MB).');
+    const r=await fetch('ocr/ron.b64.txt');if(!r.ok)throw new Error('datele de limbă lipsesc');
+    const t=atob((await r.text()).trim()),d=new Uint8Array(t.length);for(let k=0;k<t.length;k++)d[k]=t.charCodeAt(k);
+    limbaRon=d;
+  }
+  const w=await Tesseract.createWorker([{code:'ron',data:limbaRon.slice()}],1,{workerPath:absolut('ocr/worker.min.js'),corePath:absolut('ocr/tesseract-core-simd-lstm.wasm.js'),workerBlobURL:false,cacheMethod:'none'});
+  motoare[i]={w,folosit:0};
+  return w;
 }
 // Pregătește imaginea: mărește pozele mici, tonuri de gri, inversează modul întunecat.
-function pregateste(sursa,w,h){
-  const f=w<1000?Math.min(2,1400/w):w>2200?2200/w:1;
-  const c=document.createElement('canvas');c.width=Math.round(w*f);c.height=Math.round(h*f);
-  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(sursa,0,0,c.width,c.height);
+function pregateste(sursa,w,h,y0=0,y1=h){
+  const f=w>900?900/w:w<700?Math.min(2,900/w):1,ih=y1-y0;
+  const c=document.createElement('canvas');c.width=Math.round(w*f);c.height=Math.max(1,Math.round(ih*f));
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(sursa,0,y0,w,ih,0,0,c.width,c.height);
   const im=x.getImageData(0,0,c.width,c.height),d=im.data;let s=0;
   for(let i=0;i<d.length;i+=4){const g=.299*d[i]+.587*d[i+1]+.114*d[i+2];d[i]=d[i+1]=d[i+2]=g;s+=g}
   if(s/(d.length/4)<110)for(let i=0;i<d.length;i+=4){d[i]=d[i+1]=d[i+2]=255-d[i]}
-  x.putImageData(im,0,0);return{c,f};
+  x.putImageData(im,0,0);return{c,f,off:Math.round(y0*f),H:Math.round(h*f),taiat:y0>0||y1<h};
 }
 const mediana=v=>{const a=[...v].sort((x,y)=>x-y);return a.length?a[a.length>>1]:0};
 // Din cuvinte și poziții refac rândurile ecranului, chiar dacă numele și telefonul au fost citite separat.
@@ -181,20 +188,26 @@ function coloana(rs,W){
   let best=0,cnt=0;for(const[k,n]of hit)if(n>cnt||(n===cnt&&k<best)){best=k;cnt=n}
   return cnt>=3?(best-1.5)/100*W:0;
 }
-async function citeste(pre){
-  const w=await motor();
+async function citeste(pre,i,memo){
+  const w=await motor(i);motoare[i].folosit++;
   const blob=await new Promise(r=>pre.c.toBlob(r,'image/png'));
   const {data}=await w.recognize(blob,{},{text:true,blocks:true});
-  const W=pre.c.width,H=pre.c.height,rs=randuri(data),col=coloana(rs,W);
+  const W=pre.c.width,H=pre.H,rs=randuri(data);
+  // La o bandă decupată, rândul de la margine e tăiat pe jumătate: îl citește cadrul vecin.
+  const hr=mediana(rs.flatMap(r=>r.w.map(x=>x.h)))||20;
+  const buni=pre.taiat?rs.filter(r=>{const a=Math.min(...r.w.map(x=>x.y0)),b=Math.max(...r.w.map(x=>x.y1));return !(pre.off>0&&a<hr*.8)&&!(pre.off===0&&b>pre.c.height-hr*.8)}):rs;
+  let col=coloana(buni,W);
+  if(col)memo.col=col/W;else if(memo.col)col=memo.col*W;
   const linii=[];
-  for(const r of rs){
+  for(const r of buni){
     const v=col?r.w.filter(x=>x.x0>=col||x.t==='~'):r.w;
     if(!v.length)continue;
-    linii.push({t:v.map(x=>x.t).join(' '),y0:Math.min(...v.map(x=>x.y0)),y1:Math.max(...v.map(x=>x.y1))});
+    linii.push({t:v.map(x=>x.t).join(' '),y0:Math.min(...v.map(x=>x.y0))+pre.off,y1:Math.max(...v.map(x=>x.y1))+pre.off});
   }
-  const dif=[];for(let i=1;i<linii.length;i++)dif.push(linii[i].y0-linii[i-1].y0);
+  const dif=[];for(let k=1;k<linii.length;k++)dif.push(linii[k].y0-linii[k-1].y0);
   const mari=dif.filter(d=>d>H*.03);
-  return{linii,brut:data.text.split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l.length>1),geo:{inaltime:H,pas:mediana(mari)||H*.09},col,W,H,f:pre.f};
+  if(mari.length)memo.pas=mediana(mari);
+  return{linii,brut:data.text.split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l.length>1),geo:{inaltime:H,pas:memo.pas||H*.09},col,W,H,f:pre.f};
 }
 // Decupează poza de contact: în stânga numelui, fără fundalul ecranului.
 function decupeaza(sursa,c,g){
@@ -230,31 +243,101 @@ function adauga(rez,sursa){
     if(c.obs&&!ed.obs&&!v.obs.includes(c.obs))v.obs=v.obs?v.obs+'; '+c.obs:c.obs;
     if(!v.poza)v.poza=decupeaza(sursa,c,rez);
   }
-  deseneaza();
+  const acum=Date.now();
+  if(!stare.lucreaza||acum-(stare.desenat||0)>1500){stare.desenat=acum;deseneaza()}
 }
-async function poza(f){
-  const b=await createImageBitmap(f);
-  try{adauga(await citeste(pregateste(b,b.width,b.height)),b)}finally{b.close()}
+// Lucrează în paralel, dar rezultatele intră mereu în ordinea cadrelor, deci același fișier dă același rezultat.
+function banda(){
+  const inCurs=[];let nr=0;
+  const scoate=async()=>{const j=inCurs.shift();try{const{rez,sursa,gata}=await j;adauga(rez,sursa);gata&&gata()}catch(e){if(j.gata)j.gata();throw e}};
+  return{
+    async pune(pre,sursa,gata){
+      while(inCurs.length>=NR_MOTOARE)await scoate();
+      const i=nr++%NR_MOTOARE,memo=stare.set;
+      inCurs.push(citeste(pre,i,memo).then(rez=>({rez,sursa,gata})));
+    },
+    async termina(){while(inCurs.length)await scoate()}
+  };
 }
-const amprenta=v=>{const c=document.createElement('canvas');c.width=48;c.height=96;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,0,0,48,96);const d=x.getImageData(0,0,48,96).data,o=new Uint8Array(4608);for(let i=0;i<4608;i++)o[i]=d[i*4+1];return o};
-const dif=(a,b)=>{let s=0;for(let i=0;i<a.length;i++)s+=Math.abs(a[i]-b[i]);return s/a.length};
-async function filmare(f,eticheta){
+async function poza(f,b){
+  const bmp=await createImageBitmap(f);
+  await b.pune(pregateste(bmp,bmp.width,bmp.height),bmp,()=>bmp.close());
+}
+// Amprenta unui cadru, fără bara de sus și de jos: 32 de coloane pe câteva sute de rânduri.
+const SUS=.07,JOS=.93;
+function amprenta(v,W,H){
+  const rows=Math.min(400,Math.round(H*(JOS-SUS)/5)),c=document.createElement('canvas');c.width=32;c.height=rows;
+  const x=c.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='medium';
+  x.drawImage(v,0,H*SUS,W,H*(JOS-SUS),0,0,32,rows);
+  const d=x.getImageData(0,0,32,rows).data,o=new Uint8Array(32*rows);
+  for(let i=0;i<o.length;i++)o[i]=d[i*4+1];
+  return{o,rows};
+}
+// Cu cât a urcat conținutul între două cadre. Pozitiv: au apărut rânduri noi jos.
+function deplasare(a,b){
+  const R=a.rows,min=Math.round(R*.25);
+  const cost=(dy,lim)=>{
+    const n=R-Math.abs(dy),ia=dy>0?dy:0,ib=dy>0?0:-dy;let s=0,c=0;
+    for(let y=0;y<n;y+=2){
+      const pa=(y+ia)*32,pb=(y+ib)*32;
+      for(let x=0;x<32;x++)s+=Math.abs(a.o[pa+x]-b.o[pb+x]);
+      c+=32;if(s/c>lim&&c>320)return Infinity;
+    }
+    return s/c;
+  };
+  let best=0,bun=cost(0,1e9);const zero=bun;
+  for(let dy=1;dy<=R-min;dy++)for(const d of[dy,-dy]){const v=cost(d,bun);if(v<bun-.01){bun=v;best=d}}
+  const lat=[];for(let i=0;i<8;i++)lat.push(cost(Math.round((R-min)*(i+1)/9),1e9));
+  const tipic=mediana(lat)||1;
+  return{dy:best,rows:R,ok:bun<Math.max(1.5,tipic*.45),bun,zero};
+}
+async function filmare(f,eticheta,b,inregistrare){
   const u=URL.createObjectURL(f),v=document.createElement('video');
   v.muted=true;v.playsInline=true;v.preload='auto';v.src=u;
+  const cauta=t=>new Promise(ok=>{v.onseeked=ok;v.currentTime=t});
   try{
     await new Promise((ok,nu)=>{v.onloadeddata=ok;v.onerror=()=>nu(new Error('Telefonul nu poate deschide această filmare.'))});
-    const dur=v.duration;
-    if(!isFinite(dur)||!v.videoWidth)throw new Error('Filmarea nu are o durată citibilă.');
-    const pas=.6,total=Math.min(1200,Math.ceil(dur/pas)+1);let ult=null;
+    const dur=v.duration,W=v.videoWidth,H=v.videoHeight;
+    if(!isFinite(dur)||!W)throw new Error('Filmarea nu are o durată citibilă.');
+    const PAS=.4,PRAG=.45;
+    let ref=null,citite=0;
+    // Partea stângă a cadrului rămâne pentru decuparea pozei de contact, după ce filmarea a mers mai departe.
+    const instantaneu=()=>{const c=document.createElement('canvas');c.width=Math.round(W*.4);c.height=H;c.getContext('2d').drawImage(v,0,0);return c};
+    const citesteCadru=async(am,d)=>{
+      let y0=0,y1=H;
+      if(d){
+        const px=Math.abs(d.dy)/d.rows*H*(JOS-SUS),marja=H*.14;
+        if(d.dy>0)y0=Math.max(0,Math.floor(H*JOS-px-marja));else if(d.dy<0)y1=Math.min(H,Math.ceil(H*SUS+px+marja));
+      }
+      await b.pune(pregateste(v,W,H,y0,y1),instantaneu());
+      ref=am;citite++;inregistrare&&inregistrare.push({t:+v.currentTime.toFixed(2),y0,y1,dy:d?d.dy:null});
+    };
+    const trateaza=async(t,ultim,adanc,tPrec)=>{
+      await cauta(t);
+      const am=amprenta(v,W,H);
+      if(!ref)return citesteCadru(am,null);
+      const d=deplasare(ref,am);
+      if(d.ok){
+        const pr=Math.abs(d.dy)/d.rows;
+        if(pr>=PRAG||(ultim&&pr>.02))await citesteCadru(am,d);
+        return;
+      }
+      // Salt prea mare față de ultimul cadru citit: caut un cadru intermediar, ca să nu pierd rânduri.
+      if(adanc<3&&t-tPrec>.08){
+        const m=(t+tPrec)/2;
+        await trateaza(m,false,adanc+1,tPrec);
+        await trateaza(t,ultim,adanc+1,m);
+        return;
+      }
+      await citesteCadru(am,null);
+    };
+    const total=Math.ceil(dur/PAS)+1;let tPrec=0;
     for(let i=0;i<total&&!stare.oprit;i++){
-      await new Promise(ok=>{v.onseeked=ok;v.currentTime=i===total-1?Math.max(0,dur-.05):i*pas});
-      const a=amprenta(v);
-      if(ult&&dif(a,ult)<.5){progres(eticheta,(i+1)/total);continue}
-      ult=a;
-      adauga(await citeste(pregateste(v,v.videoWidth,v.videoHeight)),v);
-      progres(eticheta,(i+1)/total,`Cadrul ${i+1} din ${total}, ${stare.contacte.length} contacte.`);
+      const ultim=i===total-1,t=ultim?Math.max(0,dur-.05):i*PAS;
+      await trateaza(t,ultim,0,tPrec);tPrec=t;
+      progres(eticheta,(i+1)/total,`${Math.round(t)} din ${Math.round(dur)} secunde · ${citite} cadre citite · ${stare.contacte.length} contacte`);
     }
-  }finally{URL.revokeObjectURL(u)}
+  }finally{await b.termina();URL.revokeObjectURL(u)}
 }
 async function proceseaza(fisiere){
   if(stare.lucreaza||!fisiere.length)return;
@@ -264,14 +347,16 @@ async function proceseaza(fisiere){
   let treaza=null;try{treaza=await navigator.wakeLock.request('screen')}catch(e){}
   let rele=0;
   try{
-    await motor();
+    await motor(0);
+    const b=banda();
     for(let i=0;i<fisiere.length&&!stare.oprit;i++){
       const f=fisiere[i],et=`Fișierul ${i+1} din ${fisiere.length}`;
       try{
-        if(f.type.startsWith('video/'))await filmare(f,et);
-        else{progres(et,i/fisiere.length,'');await poza(f);progres(et,(i+1)/fisiere.length)}
+        if(f.type.startsWith('video/'))await filmare(f,et,b,window.__jurnal);
+        else{progres(et,i/fisiere.length,'');await poza(f,b);progres(et,(i+1)/fisiere.length)}
       }catch(e){rele++;console.warn(e)}
     }
+    try{await b.termina()}catch(e){rele++;console.warn(e)}
     if(rele)eroare(rele===1?'Un fișier nu a putut fi citit.':rele+' fișiere nu au putut fi citite.');
   }catch(e){
     console.error(e);eroare('Motorul de citire nu a pornit: '+(e&&e.message||e));
